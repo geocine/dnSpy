@@ -33,6 +33,9 @@ namespace dnSpy.Contracts.Documents.TreeView {
 	public readonly struct NodeFormatter {
 		static bool IsExe(ModuleDef? mod) => mod is not null && (mod.Characteristics & Characteristics.Dll) == 0;
 		static bool IsExe(IPEImage? peImage) => peImage is not null && (peImage.ImageNTHeaders.FileHeader.Characteristics & Characteristics.Dll) == 0;
+		static string? GetDisplayName(IDecompiler decompiler, IMemberRef member) => (decompiler as IDecompilerMemberNameProvider)?.GetDisplayName(member);
+		static void WriteDisplayName(ITextColorWriter output, IDecompiler decompiler, IMemberRef member, object color, string metadataName) =>
+			output.Write(color, NameUtilities.CleanIdentifier(GetDisplayName(decompiler, member) ?? metadataName));
 
 		static string GetFilename(IDsDocument document) {
 			string? filename = null;
@@ -197,7 +200,7 @@ namespace dnSpy.Contracts.Documents.TreeView {
 		/// <param name="event">Event</param>
 		/// <param name="showToken">true to write tokens</param>
 		public void Write(ITextColorWriter output, IDecompiler decompiler, EventDef @event, bool showToken) {
-			output.Write(decompiler.MetadataTextColorProvider.GetColor(@event), NameUtilities.CleanIdentifier(@event.Name));
+			WriteDisplayName(output, decompiler, @event, decompiler.MetadataTextColorProvider.GetColor(@event), @event.Name);
 			output.WriteSpace();
 			output.Write(BoxedTextColor.Punctuation, ":");
 			output.WriteSpace();
@@ -239,7 +242,7 @@ namespace dnSpy.Contracts.Documents.TreeView {
 		/// <param name="field">Field</param>
 		/// <param name="showToken">true to write tokens</param>
 		public void WriteField(ITextColorWriter output, IDecompiler decompiler, IField field, bool showToken) {
-			output.Write(decompiler.MetadataTextColorProvider.GetColor(field), NameUtilities.CleanIdentifier(field.Name));
+			WriteDisplayName(output, decompiler, field, decompiler.MetadataTextColorProvider.GetColor(field), field.Name);
 			output.WriteSpace();
 			output.Write(BoxedTextColor.Punctuation, ":");
 			output.WriteSpace();
@@ -270,7 +273,7 @@ namespace dnSpy.Contracts.Documents.TreeView {
 			if (name == ".ctor")
 				output.Write(decompiler.MetadataTextColorProvider.GetColor(method.DeclaringType), NameUtilities.CleanIdentifier(method.DeclaringType.Name));
 			else
-				output.Write(decompiler.MetadataTextColorProvider.GetColor(method), NameUtilities.CleanIdentifier(name));
+				WriteDisplayName(output, decompiler, method, decompiler.MetadataTextColorProvider.GetColor(method), name);
 
 			if (showGenericParams) {
 				if (m is MethodSpec ms && ms.GenericInstMethodSig is GenericInstMethodSig gis) {
